@@ -8,8 +8,7 @@ if a == 1 and b == 2:
 else:
     print("False")
 
-for i in range(1,5):
-    print(i)
+print("Hello")
 
 def abc():
     for i in range(1,5):
