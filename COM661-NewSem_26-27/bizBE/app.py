@@ -1,31 +1,14 @@
 from flask import Flask, make_response, jsonify, request
+#pip install pymongo
+from pymongo import MongoClient
+from bson import ObjectId
 
 app = Flask(__name__)
 
-businesses = [
-    {
-        "id": 1,
-        "name": "Costa",
-        "town": "London",
-        "rating": 4,
-        "reviews": []
-    },
-    {
-        "id": 2,
-        "name": "Nero",
-        "town": "London",
-        "rating": 4,
-        "reviews": []
-    },
-    {
-        "id": 3,
-        "name": "Starbucks",
-        "town": "London",
-        "rating": 4,
-        "reviews": []
-    },
-]
-
+#Mongo connection
+client = MongoClient("mongodb://localhost:27017")
+db = client.bizDB
+businesses = db.biz
 
 @app.route("/", methods=["GET"])
 def index():
@@ -34,7 +17,25 @@ def index():
 
 @app.route("/api/v1.0/businesses", methods=["GET"])
 def show_all_businesses():
-    return make_response(jsonify(businesses), 200)
+    
+    page_num, page_size = 1, 3
+    if request.args.get('pn'):
+        page_num = int(request.args.get('pn'))
+    if request.args.get('ps'):
+        page_size = int(request.args.get('ps'))
+    page_start = (page_size * (page_num - 1))
+
+    data_to_return = []
+
+    for business in businesses.find().skip(page_start).limit(page_size):
+        business['_id'] = str(business['_id'])
+
+        #for review in business['reviews']:
+            #review['_id'] = str(review['_id'])
+
+        data_to_return.append(business)
+
+    return make_response(jsonify(data_to_return), 200)
 
 
 # fetch by ID

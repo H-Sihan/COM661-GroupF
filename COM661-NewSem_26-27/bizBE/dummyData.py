@@ -12,19 +12,19 @@ def generate_data():
                     'Rude staff', 'Friendly staff', 'Good place, Worth the visit']
     
     usernames = ['user1','user2','user3','user4','user5','user6',
-                 'user7','user8','user9','user0',]
+                 'user7','user8','user9','user0']
     
     business_list = []
     
     for i in range(100):
-        name = "Biz " + str(i),
-        town = random.choice(towns),
+        name = "Biz " + str(i)
+        town = random.choice(towns)
         rating = random.randint(1,5)
         reviews = []
         
         for _ in range(random.randint(2,3)):
-            username = random.choice(usernames),
-            comments = random.choice(reviews_text),
+            username = random.choice(usernames)
+            comments = random.choice(reviews_text)
             stars = random.randint(1,5)
             
             reviews.append({
