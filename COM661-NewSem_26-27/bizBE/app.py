@@ -3,13 +3,38 @@ from flask import Flask, make_response, jsonify, request
 from pymongo import MongoClient
 from bson import ObjectId
 
+import jwt
+import datetime
+from functools import wraps
+
 app = Flask(__name__)
+
+app.config['SECRET_KEY'] = 'mysecret'
 
 #Mongo connection
 client = MongoClient("mongodb://localhost:27017")
 db = client.bizDB
 businesses = db.biz
 
+@app.route("/api/v1.0/login", methods=['GET'])
+def login():
+    auth = request.authorization
+
+    if auth and auth.password == 'password':
+        token = jwt.encode({
+            'user' : auth.username,
+            'exp' : datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=30)
+        },
+        app.config['SECRET_KEY'],
+        algorithm="HS256")
+
+        return make_response(jsonify({"token": token}), 200)
+    
+    return make_response("Could not verify", 401, \
+        {'WWW-Authenticate': 'Basic realm = "Login required"'})
+
+
+#================================== Business routes ========================
 @app.route("/", methods=["GET"])
 def index():
     return make_response("<h1>Welcome to Flask</h1>", 200)
@@ -120,25 +145,25 @@ def get_all_reviews(biz_id):
 
     return make_response(jsonify(business["reviews"]), 200)
 
-@app.route("/api/v1.0/businesses/<int:biz_id>/reviews", methods=['POST'])
-def add_new_review(biz_id):
-    for business in businesses:
-        if len(business['reviews']) == 0:
-            new_review_id = 1
-        else:
-            new_review_id = business['reviews'][-1]["id"] + 1
-            
-        new_review = {
-            "id": new_review_id,
-            "username": request.form['username'],
-            "comments": request.form['comments'],
-            "stars": request.form['stars']
+#=======================================Reviews (Post method) =================================
+
+@app.route("/api/v1.0/businesses/<string:biz_id>/reviews", methods=['POST'])
+def add_new_review(biz_id): 
+    new_review = {
+        "_id": ObjectId(),
+        "username": request.form['username'],
+        "comments": request.form['comments'],
+        "stars": request.form['stars']
         }
         
-        business["reviews"].append(new_review)
-        break
+    businesses.update_one({ "_id" : ObjectId(biz_id) },\
+        {"$push": {"review":new_review}})
+
+    new_review_link = "http://127.0.0.1:5001/api/v1.0/businesses/"+ biz_id +"/reviews"\
+        + str(new_review["_id"])
     
-    return make_response(jsonify(new_review), 201)
+    return make_response(jsonify({"url": new_review_link}), 201)
+    
 
 
 @app.route("/api/v1.0/businesses/<int:biz_id>/reviews/<int:rev_id>", methods=['GET'])
