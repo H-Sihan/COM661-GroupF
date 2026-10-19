@@ -39,51 +39,75 @@ def show_all_businesses():
 
 
 # fetch by ID
-@app.route("/api/v1.0/businesses/<int:biz_id>", methods=["GET"])
+@app.route("/api/v1.0/businesses/<string:biz_id>", methods=["GET"])
 def show_one_businesses(biz_id):
-    data_to_return = [business for business in businesses
-                      if business["id"] == biz_id]
+    business = businesses.find_one({'_id':ObjectId(biz_id)})
 
-    return make_response(jsonify(data_to_return[0]), 200)
+    if business is not None:
+        business['_id'] = str(business['_id'])
+
+        #for review in business['reviews']:
+            #review['_id'] = str(review['_id'])
+        
+        return make_response(jsonify(business), 200)
+
+    else:
+        return make_response(jsonify({"error":"Invalid business ID"}), 404)
 
 
 @app.route("/api/v1.0/businesses", methods=["POST"])
 def add_business():
-    next_id = businesses[-1]["id"] + 1
+    if "name" in request.form and \
+        "town" in request.form and "rating" in request.form:
+        
+        new_business = {
+            "name": request.form["name"],
+            "town": request.form["town"],
+            "rating": request.form["rating"],
+            "review": []
+        }
 
-    new_business = {
-        "id": next_id,
-        "name": request.form["name"],
-        "town": request.form["town"],
-        "rating": request.form["rating"],
-        "review": []
-    }
+        new_business_id = businesses.insert_one(new_business)
 
-    businesses.append(new_business)
+        new_business_link = "http://127.0.0.1:5001/api/v1.0/businesses/"\
+            + str(new_business_id.inserted_id)
+        
+        return make_response(jsonify({"url": new_business_link}), 201)
 
-    return make_response(jsonify(new_business), 201)
+    else:
+        return make_response(jsonify({"url":"Missing form data"}), 404)
 
 
-@app.route("/api/v1.0/businesses/<int:biz_id>", methods=["PUT"])
+@app.route("/api/v1.0/businesses/<string:biz_id>", methods=["PUT"])
 def edit_business(biz_id):
-    for business in businesses:
-        if business['id'] == biz_id:
-            business['name'] = request.form['name']
-            business['town'] = request.form['town']
-            business['rating'] = request.form['rating']
-            break
+    if "name" in request.form and "town" in request.form and "rating" in request.form:
+        results = businesses.update_one(
+            {"_id":ObjectId(biz_id)}, {
+                "$set": {
+                    "name": request.form["name"],
+                    "town": request.form["town"],
+                    "rating": request.form["rating"],
+                }
+            }
+        )
+        if results.matched_count == 1:
+            edited_link = "http://127.0.0.1:5001/api/v1.0/businesses/" \
+            + biz_id 
+            return make_response(jsonify({"url": edited_link}), 200)
+        else:
+            return make_response(jsonify({"error": "Invalid business ID"}), 404)
+    else:
+        return make_response(jsonify({"error":"Missing form data"}), 404)
 
-    return make_response(jsonify(business), 200)
 
-
-@app.route("/api/v1.0/businesses/<int:biz_id>", methods=['DELETE'])
+@app.route("/api/v1.0/businesses/<string:biz_id>", methods=['DELETE'])
 def delete_business(biz_id):
-    for business in businesses:
-        if business["id"] == biz_id:
-            businesses.remove(business)
-            break
+    result = businesses.delete_one({"_id":ObjectId(biz_id)})
 
-    return make_response(jsonify({"Message": "Business deleted Successfully!!!"}), 200)
+    if result.deleted_count == 1:
+        return make_response(jsonify({"message":"Business deleted!!!"}), 200)
+    else:
+        return make_response(jsonify({"error":"Invalid business ID"}), 404)
 
 
 # ===================== REVIEWS ==============================
