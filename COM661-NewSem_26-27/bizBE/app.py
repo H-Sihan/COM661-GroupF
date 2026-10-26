@@ -16,6 +16,26 @@ client = MongoClient("mongodb://localhost:27017")
 db = client.bizDB
 businesses = db.biz
 
+def jwt_required(func):
+    @wraps(func)
+    def jwt_required_wrapper(*args, **kwargs):
+        token = request.args.get('token')
+
+        if not token:
+            return make_response(jsonify({'message':'Token is missing...'}), 401)
+
+        try:
+            data = jwt.decode(token,
+                app.config['SECRET_KEY'],
+                algorithms='HS256')
+
+        except:
+            return make_response(jsonify({'message':'Token is invalid'}), 401)
+        
+        return func(*args, **kwargs)
+    
+    return jwt_required_wrapper
+
 @app.route("/api/v1.0/login", methods=['GET'])
 def login():
     auth = request.authorization
@@ -41,6 +61,7 @@ def index():
 
 
 @app.route("/api/v1.0/businesses", methods=["GET"])
+@jwt_required
 def show_all_businesses():
     
     page_num, page_size = 1, 3
