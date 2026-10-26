@@ -19,7 +19,11 @@ businesses = db.biz
 def jwt_required(func):
     @wraps(func)
     def jwt_required_wrapper(*args, **kwargs):
-        token = request.args.get('token')
+        # token = request.args.get('token')
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
 
         if not token:
             return make_response(jsonify({'message':'Token is missing...'}), 401)
