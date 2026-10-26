@@ -1,5 +1,5 @@
 from flask import Blueprint, make_response, jsonify, request
-from bson import ObjectId
+from decorators import jwt_required
 import bcrypt
 import jwt
 import datetime
