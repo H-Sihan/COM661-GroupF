@@ -3,6 +3,8 @@ from flask import Flask, make_response, jsonify, request
 from pymongo import MongoClient
 from bson import ObjectId
 
+import bcrypt
+
 import jwt
 import datetime
 from functools import wraps
@@ -15,6 +17,8 @@ app.config['SECRET_KEY'] = 'mysecret'
 client = MongoClient("mongodb://localhost:27017")
 db = client.bizDB
 businesses = db.biz
+users = db.users
+blacklist = db.blacklist
 
 def jwt_required(func):
     @wraps(func)
@@ -44,19 +48,36 @@ def jwt_required(func):
 def login():
     auth = request.authorization
 
-    if auth and auth.password == 'password':
-        token = jwt.encode({
-            'user' : auth.username,
-            'exp' : datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=30)
-        },
-        app.config['SECRET_KEY'],
-        algorithm="HS256")
+    if auth:
+        user = users.find_one({'username': auth.username})
 
-        return make_response(jsonify({"token": token}), 200)
+        if user is not None:
+            if bcrypt.checkpw(bytes(auth.password, 'utf-8'), user["password"]):
+                token = jwt.encode({
+                    'user' : auth.username,
+                    'exp' : datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=30)
+                },
+                app.config['SECRET_KEY'],
+                algorithm="HS256")
+
+                return make_response(jsonify({"token": token}), 200)
+
+            else:
+                return make_response(jsonify({'message':'Bad password'}), 401)
+        
+        else:
+            return make_response(jsonify({'message':'Bad username'}), 401)
     
     return make_response("Could not verify", 401, \
         {'WWW-Authenticate': 'Basic realm = "Login required"'})
 
+@app.route("/api/v1.0/logout", methods=['GET'])
+@jwt_required
+def logout():
+    token = request.headers['x-access-token']
+    blacklist.insert_one({"token":token})
+
+    return make_response(jsonify({'message':'Logout successful'}), 200)
 
 #================================== Business routes ========================
 @app.route("/", methods=["GET"])
