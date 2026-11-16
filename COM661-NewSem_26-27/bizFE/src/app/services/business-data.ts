@@ -7,7 +7,7 @@ import jsonData from '../../data/business.json';
 export class BusinessData {
     pageSize: number = 3;
 
-    getBusiness(page: number){
+    getBusinesses(page: number){
         let pageStart = (page - 1) * this.pageSize;
         let pageEnd = pageStart + this.pageSize;
         return jsonData.slice(pageStart, pageEnd);
@@ -15,5 +15,15 @@ export class BusinessData {
 
     getLastPageNumber(){
         return Math.ceil(jsonData.length / this.pageSize);
+    }
+
+    getBusiness(id: any){
+        let dataToReturn: any[] = [];
+        jsonData.forEach(function(business){
+            if(business._id.$oid == id){
+                dataToReturn.push(business);
+            }
+        })
+        return dataToReturn;
     }
 }
