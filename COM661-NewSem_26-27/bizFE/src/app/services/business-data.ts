@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import jsonData from '../../data/business.json';
-
+//ng g c navigation
 @Injectable({
     providedIn: 'root'
 })
